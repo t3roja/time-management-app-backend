@@ -14,10 +14,20 @@ def index
   )
 end
 
+  # GET /projects/:id
+  def show
+    render json: @project.as_json(
+      only: [:id, :name],
+      include: {
+        entries: { only: [:id, :date, :task, :time, :hours] }
+      },
+      methods: [:totalHours] 
+    )
+  end
 
   # GET /projects/1
-  def show
-  end
+  # def show
+  # end
 
   # GET /projects/new
   def new

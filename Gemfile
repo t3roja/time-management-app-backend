@@ -19,6 +19,10 @@ gem "jbuilder"
 # CORS
 gem 'rack-cors'
 
+gem 'omniauth'
+gem 'omniauth-rails_csrf_protection'
+
+
 
 
 # Use Active Model has_secure_password [https://guides.rubyonrails.org/active_model_basics.html#securepassword]
@@ -65,3 +69,7 @@ group :test do
   gem "capybara"
   gem "selenium-webdriver"
 end
+
+gem "devise"
+
+gem "devise_token_auth", "~> 1.2"
