@@ -1,14 +1,21 @@
 class ProjectsController < ApplicationController
+  before_action :authenticate_user!
+  before_action :authorize_admin, only: %i[create destroy] 
   before_action :set_project, only: %i[ show edit update destroy ]
-
 
   # GET /projects
 def index
-  projects = Project.includes(:entries)
+  projects = if current_user.admin?
+               Project.includes(:entries, :user)
+             else
+               current_user.projects.includes(:entries)
+             end
+
   render json: projects.as_json(
     only: [:id, :name],
     methods: [:totalHours],
     include: {
+      user: { only: [:id, :email] },
       entries: { only: [:id, :date, :task, :time, :hours] }
     }
   )
@@ -21,66 +28,57 @@ end
       include: {
         entries: { only: [:id, :date, :task, :time, :hours] }
       },
-      methods: [:totalHours] 
+      methods: [:totalHours]
     )
   end
 
-  # GET /projects/1
-  # def show
-  # end
-
-  # GET /projects/new
-  def new
-    @project = Project.new
-  end
-
-  # GET /projects/1/edit
-  def edit
-  end
-
   # POST /projects
-  def create
-    @project = Project.new(project_params)
-    respond_to do |format|
-      if @project.save
-        format.html { redirect_to @project, notice: "Project was successfully created." }
-        format.json { render :show, status: :created, location: @project }
-      else
-        format.html { render :new, status: :unprocessable_entity }
-        format.json { render json: @project.errors, status: :unprocessable_entity }
-      end
-    end
-  end
+def create
+  # Admin voi määrittää käyttäjän, muuten käytetään current_user
+  user = current_user.admin? && params[:project][:user_id].present? ? User.find(params[:project][:user_id]) : current_user
+  @project = user.projects.new(project_params)
 
-  # PATCH/PUT /projects/1
+  if @project.save
+    render json: @project, status: :created
+  else
+    render json: @project.errors, status: :unprocessable_entity
+  end
+end
+
+
+  # PATCH/PUT /projects/:id
   def update
-    respond_to do |format|
-      if @project.update(project_params)
-        format.html { redirect_to @project, notice: "Project was successfully updated.", status: :see_other }
-        format.json { render :show, status: :ok, location: @project }
-      else
-        format.html { render :edit, status: :unprocessable_entity }
-        format.json { render json: @project.errors, status: :unprocessable_entity }
-      end
+    if @project.update(project_params)
+      render json: @project, status: :ok
+    else
+      render json: @project.errors, status: :unprocessable_entity
     end
   end
 
-  # DELETE /projects/1
+  def set_project
+  @project = current_user.projects.find(params[:id])
+end
+
+  # DELETE /projects/:id
   def destroy
-    @project.destroy!
-    respond_to do |format|
-      format.html { redirect_to projects_path, notice: "Project was successfully destroyed.", status: :see_other }
-      format.json { head :no_content }
-    end
+    @project.destroy
+    head :no_content
   end
 
   private
 
   def set_project
-    @project = Project.find(params[:id])
+    @project = current_user.projects.find(params[:id])
   end
 
-  def project_params
-    params.require(:project).permit(:name, :description)
+  def authorize_admin
+  render json: { error: "Unauthorized" }, status: :unauthorized unless current_user.admin?
   end
+
+def project_params
+  allowed = [:name, :description]
+  allowed << :user_id if current_user&.admin?
+  params.require(:project).permit(allowed)
+end
+
 end

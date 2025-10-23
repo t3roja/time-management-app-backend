@@ -1,9 +1,11 @@
 Rails.application.routes.draw do
-  # DeviseTokenAuth API reitit
+  # DeviseTokenAuth
   mount_devise_token_auth_for 'User', at: 'auth'
 
+  namespace :api do
+    resources :users, only: [:index]  # /api/users
+  end
 
-  # Sovellusreitit
   resources :projects do
     resources :entries, only: [:index, :show, :create, :update, :destroy]
   end
