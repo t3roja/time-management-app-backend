@@ -12,11 +12,11 @@ def index
              end
 
   render json: projects.as_json(
-    only: [:id, :name],
+    only: [:id, :name, :completed],
     methods: [:totalHours],
     include: {
       user: { only: [:id, :email] },
-      entries: { only: [:id, :date, :task, :time, :hours] }
+      entries: { only: [:id, :date, :task, :hours] }
     }
   )
 end
@@ -24,9 +24,9 @@ end
   # GET /projects/:id
   def show
     render json: @project.as_json(
-      only: [:id, :name],
+      only: [:id, :name, :completed],
       include: {
-        entries: { only: [:id, :date, :task, :time, :hours] }
+        entries: { only: [:id, :date, :task, :hours] }
       },
       methods: [:totalHours]
     )
@@ -67,16 +67,21 @@ end
 
   private
 
-  def set_project
-    @project = current_user.projects.find(params[:id])
-  end
+def set_project
+  @project = if current_user.admin?
+               Project.find(params[:id])
+             else
+               current_user.projects.find(params[:id])
+             end
+end
+
 
   def authorize_admin
   render json: { error: "Unauthorized" }, status: :unauthorized unless current_user.admin?
   end
 
 def project_params
-  allowed = [:name, :description]
+  allowed = [:name, :description, :completed]
   allowed << :user_id if current_user&.admin?
   params.require(:project).permit(allowed)
 end
